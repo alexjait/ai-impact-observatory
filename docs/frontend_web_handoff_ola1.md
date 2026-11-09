@@ -1,0 +1,111 @@
+# Frontend Web Handoff Ola 1
+
+## Alcance Implementado
+- home publica conectada al backend real
+- catalogo de actividades con filtros por query string
+- detalle de actividad con jerarquia editorial
+- metodologia publica
+- login y registro con backend local
+- forgot password y reset password
+- pantalla de conflicto para Google
+- pantalla de alta social pendiente de terminos
+- detalle publico de evidencia
+- bandeja privada de propuestas
+- formulario de nueva actividad
+- formulario de nueva evidencia
+- edicion de propuestas pendientes desde la UI privada
+- comentarios y denuncia reales en detalles publicos
+- perfil autenticado con lectura real de sesion
+- dashboard real de backoffice con resumen operativo
+- cola de moderacion real para propuestas, comentarios y actividades seed
+- workspace editorial real para actividades importadas
+- actualizacion de resumen editorial bilingue desde UI
+- actualizacion de estado editorial y estado IA oficial desde UI
+- marcado de confiabilidad de evidencia desde UI editorial
+- filtros por estado y paginacion en moderacion/editorial
+- busqueda visible dentro de la cola de moderacion
+- detalle inline de propuestas de actividad y evidencia dentro de la cola
+- contexto bilingue mas completo dentro del workspace editorial
+- navegacion de retorno preservando estado y pagina editorial
+- filtros editoriales operativos por query, resumen, evidencia, estado IA, industria y categoria
+- navegacion editorial `previous/next` dentro de la misma lane de revision
+- seleccion multiple en cola editorial
+- bulk actions editoriales desde UI con feedback por item
+- tablero de readiness editorial dentro del workspace
+- diagnostico visible de readiness y atajos de filtro en la cola editorial
+- acciones de throughput en workspace para guardar y volver a la cola o avanzar al siguiente item
+- panel de follow-through con atajos a lanes objetivo y vistas listas para aprobar
+- limpieza de UX publica con tono menos institucional en header, home y estados vacios
+- reemplazo del bloque de metricas de home por una entrada mas orientada a uso
+- correccion de layout en `Explorar` y `Mayor disrupcion` para devolver protagonismo al catalogo
+- cabecera de catalogo mas expresiva con vistas rapidas para `Cambios fuertes` y filtros activos visibles
+- paginacion publica en `Explorar` para navegar mejor volumen real del catalogo
+- tarjetas publicas mas legibles con clave visible y mejor tolerancia a titulos y descripciones largas
+- cola de moderacion de comentarios con contexto claro de actividad o evidencia asociada
+- busqueda de comentarios reportados validada desde UI por actividad relacionada, no solo por texto del comentario
+- contencion explicita de controles dentro del panel de filtros del catalogo para evitar overlap visual sobre las cards
+- detalle de actividad con copy mas claro para el resumen publico, CTA directo a `Proponer nueva evidencia` y formulario de evidencia con actividad preseleccionada desde contexto
+
+## Integracion Tecnica
+- frontend en `frontend-web/` con Next.js App Router
+- llamadas publicas server-side a `NEXT_PUBLIC_API_BASE_URL`
+- auth de navegador via `fetch(..., { credentials: 'include' })`
+- lectura SSR de sesion usando cookie `aiio_session`
+- backend ajustado para CORS con credenciales hacia `APP_BASE_URL`
+
+## Validacion Real Ejecutada
+- `npm.cmd run build` en `backend/`
+- `npm.cmd run build` en `frontend-web/`
+- `npm.cmd run lint` en `frontend-web/`
+- smoke browser real:
+  - carga de home
+  - carga de registro
+  - registro exitoso
+  - redireccion a `/me`
+  - logout
+  - login exitoso
+  - carga y submit de forgot password
+- smoke SSR real:
+  - `/me/proposals`
+  - `/me/proposals/activity/new`
+  - `/me/proposals/evidence/new`
+  - `/me/proposals` con cookie real y propuesta renderizada desde backend
+- smoke browser real adicional:
+  - submit exitoso de nueva propuesta de actividad
+  - edicion exitosa de propuesta pendiente desde la bandeja privada
+  - render real del bloque de comentarios en detalle de actividad
+  - alta exitosa de comentario desde frontend en detalle publico
+  - carga real de `/backoffice`
+  - carga real de `/backoffice/moderation`
+  - carga real de `/backoffice/editorial`
+  - busqueda visible y detalle inline de propuesta en `/backoffice/moderation`
+  - filtrado visible de la cola editorial desde UI
+  - seleccion multiple de actividades editoriales
+  - accion masiva editorial desde UI con confirmacion de resultados
+  - tablero de readiness visible en el workspace editorial
+  - diagnostico rapido de readiness en la cola editorial
+  - guardado exitoso de resumen editorial bilingue desde UI en `/backoffice/editorial/activities/:id`
+  - retorno automatico a la cola editorial despues de guardar resumen
+  - panel de follow-through visible con atajos a lanes y vistas operativas
+  - render de navegacion de lane editorial dentro del workspace
+- smoke reproducible de backoffice validando moderacion, resolucion de denuncia y guardado editorial
+- smoke reproducible de backoffice validando tambien busqueda de comentario reportado por actividad asociada y target enriquecido visible
+
+## Riesgos Abiertos
+- Google OAuth sigue sin validacion end to end porque faltan credenciales
+- el catalogo publico todavia puede verse vacio hasta importar y aprobar seed
+- locale por query param resuelve esta ola, pero no cubre aun rutas por locale
+- falta polish adicional de propuestas y backoffice
+- reset password queda validado en UI, pero no hubo token real para probar flujo completo
+- propuestas ya cuentan con endpoints backend reales
+- la bandeja SSR de propuestas ya consume cookie real y refleja datos backend
+- comentarios publicos ya se consumen en UI real, con alta de comentarios, respuestas y denuncia
+- el backoffice requiere roles `EDITOR`, `MODERATOR` o `ADMIN` para ser visible y operable
+- la validacion de Google OAuth real ya fue hecha manualmente en local
+- la cola editorial ya permite navegar por lane, ejecutar bulk actions y mostrar readiness, pero todavia puede ganar ergonomia adicional para procesar volumen mas alto del seed
+- la experiencia publica ya quedo menos formal, pero todavia puede beneficiarse de una segunda pasada de copy si queres acercarla mas a una voz personal
+- el catalogo publico ya es mas navegable, pero todavia no tiene ordenamientos o vistas curadas mas avanzadas
+
+## Siguiente Ola Recomendada
+- `testing` para profundizar regresion sobre bulk editorial, historial y escenarios no felices de backoffice
+- `frontend-web` para seguir mejorando ergonomia editorial sobre volumen alto del seed y acciones de publicacion mas rapidas

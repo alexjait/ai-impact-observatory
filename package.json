@@ -1,0 +1,14 @@
+{
+  "name": "ai-impact-observatory",
+  "private": true,
+  "scripts": {
+    "infra:build": "docker compose --env-file .env.docker -f docker-compose.yml -f docker-compose.dev.yml build",
+    "infra:up": "docker compose --env-file .env.docker -f docker-compose.yml -f docker-compose.dev.yml up -d --build",
+    "infra:down": "docker compose --env-file .env.docker -f docker-compose.yml -f docker-compose.dev.yml down --remove-orphans",
+    "infra:logs": "docker compose --env-file .env.docker -f docker-compose.yml -f docker-compose.dev.yml logs -f --tail=200",
+    "infra:prod:build": "docker compose --env-file .env.production -f docker-compose.yml build",
+    "infra:prod:up": "docker compose --env-file .env.production -f docker-compose.yml up -d --build",
+    "infra:prod:down": "docker compose --env-file .env.production -f docker-compose.yml down --remove-orphans",
+    "infra:prod:logs": "docker compose --env-file .env.production -f docker-compose.yml logs -f --tail=200"
+  }
+}

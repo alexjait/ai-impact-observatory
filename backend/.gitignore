@@ -1,0 +1,6 @@
+.env
+dist
+node_modules
+# Compiled artifacts — source of truth is always the .ts files
+src/**/*.js
+src/**/*.js.map

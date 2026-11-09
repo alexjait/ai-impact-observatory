@@ -1,0 +1,12 @@
+# Environment files with real credentials — never commit these
+.env
+.env.*
+# Allow example/template files to be committed
+!.env.example
+!.env.*.example
+
+# Generated logs and local test artifacts
+*.log
+*.err
+/output/
+/frontend-web/output/

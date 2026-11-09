@@ -1,0 +1,80 @@
+services:
+  db:
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+
+  backend:
+    build:
+      context: ./backend
+      target: development
+    env_file:
+      - ./backend/.env
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-ai_impact_observatory_dev}?schema=public}
+      API_BASE_URL: ${API_BASE_URL:-http://localhost:3001}
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:3000}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000}
+      SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-aiio_session}
+      SOCIAL_SIGNUP_COOKIE_NAME: ${SOCIAL_SIGNUP_COOKIE_NAME:-aiio_social_signup}
+      SESSION_TTL_HOURS: ${SESSION_TTL_HOURS:-720}
+      PASSWORD_RESET_TTL_MINUTES: ${PASSWORD_RESET_TTL_MINUTES:-60}
+      AUTH_FLOW_TTL_MINUTES: ${AUTH_FLOW_TTL_MINUTES:-15}
+      EMAIL_VERIFICATION_TTL_HOURS: ${EMAIL_VERIFICATION_TTL_HOURS:-24}
+      DEFAULT_LOCALE: ${DEFAULT_LOCALE:-en}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
+      AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-false}
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-http://localhost:3001/api/v1/auth/google/callback}
+      AUTH_CONFLICT_PATH: ${AUTH_CONFLICT_PATH:-/auth/conflict}
+      SOCIAL_SIGNUP_PATH: ${SOCIAL_SIGNUP_PATH:-/auth/social/complete}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-onboarding@resend.dev}
+      TRANSLATION_PROVIDER: ${TRANSLATION_PROVIDER:-mymemory}
+      TRANSLATION_API_BASE_URL: ${TRANSLATION_API_BASE_URL:-https://api.mymemory.translated.net}
+      TRANSLATION_CONTACT_EMAIL: ${TRANSLATION_CONTACT_EMAIL:-}
+      SEED_CSV_PATH: ${SEED_CSV_PATH:-/docs/seed_portal_impacto_ia_bilingue_tres_evidencias_corregido.csv}
+    entrypoint: ["node", "scripts/docker-entrypoint.js"]
+    command:
+      [
+        "sh",
+        "-lc",
+        "DATABASE_URL_FROM_COMPOSE=\"$$DATABASE_URL\"; NODE_ENV_FROM_COMPOSE=\"$$NODE_ENV\"; PORT_FROM_COMPOSE=\"$$PORT\"; set -a; if [ -f /app/.env ]; then . /app/.env; fi; set +a; export DATABASE_URL=\"$$DATABASE_URL_FROM_COMPOSE\" NODE_ENV=\"$$NODE_ENV_FROM_COMPOSE\" PORT=\"$$PORT_FROM_COMPOSE\"; npm install && npm run prisma:generate && npm run start:dev",
+      ]
+    volumes:
+      - ./backend:/app
+      - backend_node_modules:/app/node_modules
+
+  frontend:
+    build:
+      context: ./frontend-web
+      target: development
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:3001/api/v1}
+        API_INTERNAL_BASE_URL: ${API_INTERNAL_BASE_URL:-http://backend:3001/api/v1}
+        SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-aiio_session}
+    env_file:
+      - ./frontend-web/.env.local
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+      API_INTERNAL_BASE_URL: ${API_INTERNAL_BASE_URL:-http://backend:3001/api/v1}
+    command:
+      [
+        "sh",
+        "-lc",
+        "set -a; if [ -f /app/.env.local ]; then . /app/.env.local; fi; set +a; npm install && npm run dev -- --hostname 0.0.0.0 --port 3000",
+      ]
+    volumes:
+      - ./frontend-web:/app
+      - frontend_node_modules:/app/node_modules
+      - frontend_next:/app/.next
+
+volumes:
+  backend_node_modules:
+  frontend_node_modules:
+  frontend_next:

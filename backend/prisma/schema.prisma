@@ -1,0 +1,577 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Locale {
+  en
+  es
+}
+
+enum RoleKey {
+  REGISTERED
+  MODERATOR
+  EDITOR
+  ADMIN
+}
+
+enum Granularity {
+  tarea
+  funcion
+  rol
+  profesion
+}
+
+enum EditorialStatus {
+  pending
+  approved
+  rejected
+  needs_correction
+  archived
+}
+
+enum ReliabilityFlag {
+  normal
+  outdated
+  low_confidence
+  archived
+}
+
+enum CommentVisibilityStatus {
+  visible
+  hidden
+  archived
+}
+
+enum CommentReportStatus {
+  clean
+  reported
+  under_review
+  resolved
+}
+
+enum SeedImportStatus {
+  running
+  completed
+  failed
+}
+
+enum AuthProvider {
+  local
+  google
+}
+
+enum AuthFlowPurpose {
+  google_oauth
+  social_signup
+  email_verification
+}
+
+enum ModerationTargetType {
+  activity_proposal
+  evidence_proposal
+  comment
+  activity
+  evidence
+}
+
+enum ModerationActionType {
+  approve
+  reject
+  request_correction
+  hide
+  archive
+  resolve_report
+  mark_reliability
+  update_summary
+}
+
+enum ContactMessageStatus {
+  new
+  read
+  archived
+}
+
+model User {
+  id                  String               @id @default(cuid())
+  email               String               @unique
+  displayName         String
+  isActive            Boolean              @default(true)
+  termsAcceptedAt     DateTime?
+  localePreference    Locale               @default(en)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  authIdentities      AuthIdentity[]
+  roleAssignments     UserRoleAssignment[]
+  sessions            Session[]
+  passwordResetTokens PasswordResetToken[]
+  authFlowStates      AuthFlowState[]
+  activityProposals   ActivityProposal[]
+  evidenceProposals   EvidenceProposal[]
+  comments            Comment[]
+  commentReports      CommentReport[]
+  activityFollows     ActivityFollow[]
+  moderationActions   ModerationAction[]
+  editorialActions    EditorialActivityStatusHistory[]
+  portalConfigUpdates PortalConfig[]
+  contactMessages    ContactMessage[]
+}
+
+model AuthIdentity {
+  id                  String               @id @default(cuid())
+  userId              String
+  provider            AuthProvider
+  providerUserId      String
+  email               String
+  emailVerifiedAt     DateTime?
+  passwordHash        String?
+  displayNameSnapshot String?
+  avatarUrl           String?
+  linkedAt            DateTime             @default(now())
+  lastLoginAt         DateTime?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessions            Session[]
+  passwordResetTokens PasswordResetToken[]
+  authFlowStates      AuthFlowState[]
+
+  @@unique([provider, providerUserId])
+  @@unique([provider, email])
+}
+
+model AuthFlowState {
+  id             String          @id @default(cuid())
+  purpose        AuthFlowPurpose
+  provider       AuthProvider?
+  tokenHash      String          @unique
+  userId         String?
+  authIdentityId String?
+  returnTo       String?
+  payloadJson    Json?
+  expiresAt      DateTime
+  usedAt         DateTime?
+  createdAt      DateTime        @default(now())
+  user           User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  authIdentity   AuthIdentity?   @relation(fields: [authIdentityId], references: [id], onDelete: Cascade)
+}
+
+model Role {
+  id          String               @id @default(cuid())
+  key         RoleKey              @unique
+  label       String
+  createdAt   DateTime             @default(now())
+  assignments UserRoleAssignment[]
+}
+
+model UserRoleAssignment {
+  id        String   @id @default(cuid())
+  userId    String
+  roleId    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+}
+
+model Session {
+  id             String        @id @default(cuid())
+  userId         String
+  authIdentityId String?
+  tokenHash      String        @unique
+  expiresAt      DateTime
+  createdAt      DateTime      @default(now())
+  lastSeenAt     DateTime      @default(now())
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  authIdentity   AuthIdentity? @relation(fields: [authIdentityId], references: [id], onDelete: SetNull)
+}
+
+model PasswordResetToken {
+  id             String        @id @default(cuid())
+  userId         String
+  authIdentityId String?
+  tokenHash      String        @unique
+  expiresAt      DateTime
+  usedAt         DateTime?
+  createdAt      DateTime      @default(now())
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  authIdentity   AuthIdentity? @relation(fields: [authIdentityId], references: [id], onDelete: SetNull)
+}
+
+model Industry {
+  id           String                @id @default(cuid())
+  key          String                @unique
+  isActive     Boolean               @default(true)
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+  translations IndustryTranslation[]
+  activities   ActivityIndustry[]
+  proposals    ActivityProposalIndustry[]
+}
+
+model IndustryTranslation {
+  id         String   @id @default(cuid())
+  industryId String
+  locale     Locale
+  name       String
+  slug       String
+  industry   Industry @relation(fields: [industryId], references: [id], onDelete: Cascade)
+
+  @@unique([industryId, locale])
+  @@unique([locale, slug])
+}
+
+model FunctionalCategory {
+  id           String                          @id @default(cuid())
+  key          String                          @unique
+  isActive     Boolean                         @default(true)
+  createdAt    DateTime                        @default(now())
+  updatedAt    DateTime                        @updatedAt
+  translations FunctionalCategoryTranslation[]
+  activities   ActivityCategory[]
+  proposals    ActivityProposalCategory[]
+}
+
+model FunctionalCategoryTranslation {
+  id                   String             @id @default(cuid())
+  functionalCategoryId String
+  locale               Locale
+  name                 String
+  slug                 String
+  functionalCategory   FunctionalCategory @relation(fields: [functionalCategoryId], references: [id], onDelete: Cascade)
+
+  @@unique([functionalCategoryId, locale])
+  @@unique([locale, slug])
+}
+
+model Activity {
+  id               String             @id @default(cuid())
+  key              String             @unique
+  granularity      Granularity
+  editorialStatus  EditorialStatus    @default(pending)
+  officialAiStatus Int?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  translations     ActivityTranslation[]
+  industries       ActivityIndustry[]
+  categories       ActivityCategory[]
+  evidenceLinks    EvidenceActivity[]
+  proposalLinks    EvidenceProposalActivity[]
+  comments         Comment[]
+  followers        ActivityFollow[]
+  editorialHistory EditorialActivityStatusHistory[]
+  materializedFromProposal ActivityProposal? @relation("MaterializedActivity")
+}
+
+model ActivityFollow {
+  id         String   @id @default(cuid())
+  userId     String
+  activityId String
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, activityId])
+  @@index([userId, createdAt])
+  @@index([activityId, createdAt])
+}
+
+model ActivityTranslation {
+  id               String   @id @default(cuid())
+  activityId       String
+  locale           Locale
+  title            String
+  shortDescription String?
+  fullDescription  String?
+  editorialSummary String?
+  seoTitle         String?
+  seoDescription   String?
+  slug             String
+  activity         Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@unique([activityId, locale])
+  @@unique([locale, slug])
+}
+
+model ActivityIndustry {
+  id         String   @id @default(cuid())
+  activityId String
+  industryId String
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  industry   Industry @relation(fields: [industryId], references: [id], onDelete: Cascade)
+
+  @@unique([activityId, industryId])
+}
+
+model ActivityCategory {
+  id                   String             @id @default(cuid())
+  activityId           String
+  functionalCategoryId String
+  activity             Activity           @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  functionalCategory   FunctionalCategory @relation(fields: [functionalCategoryId], references: [id], onDelete: Cascade)
+
+  @@unique([activityId, functionalCategoryId])
+}
+
+model Evidence {
+  id              String                @id @default(cuid())
+  key             String?               @unique
+  editorialStatus EditorialStatus       @default(pending)
+  type            String
+  sourceText      String
+  sourceUrl       String?
+  eventDate       DateTime?
+  reliabilityFlag ReliabilityFlag       @default(normal)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  translations    EvidenceTranslation[]
+  activities      EvidenceActivity[]
+  comments        Comment[]
+  moderationActions ModerationAction[] @relation("ModerationEvidence")
+  materializedFromProposal EvidenceProposal? @relation("MaterializedEvidence")
+}
+
+model ActivityProposal {
+  id              String                        @id @default(cuid())
+  authorUserId    String
+  materializedActivityId String?                @unique
+  granularity     Granularity
+  editorialStatus EditorialStatus               @default(pending)
+  moderationNote  String?
+  createdAt       DateTime                      @default(now())
+  updatedAt       DateTime                      @updatedAt
+  author          User                          @relation(fields: [authorUserId], references: [id], onDelete: Cascade)
+  materializedActivity Activity?                @relation("MaterializedActivity", fields: [materializedActivityId], references: [id], onDelete: SetNull)
+  translations    ActivityProposalTranslation[]
+  industries      ActivityProposalIndustry[]
+  categories      ActivityProposalCategory[]
+  moderationActions ModerationAction[] @relation("ModerationActivityProposal")
+}
+
+model ActivityProposalTranslation {
+  id                 String           @id @default(cuid())
+  activityProposalId String
+  locale             Locale
+  title              String
+  shortDescription   String?
+  fullDescription    String?
+  activityProposal   ActivityProposal @relation(fields: [activityProposalId], references: [id], onDelete: Cascade)
+
+  @@unique([activityProposalId, locale])
+}
+
+model ActivityProposalIndustry {
+  id                 String           @id @default(cuid())
+  activityProposalId String
+  industryId         String
+  activityProposal   ActivityProposal @relation(fields: [activityProposalId], references: [id], onDelete: Cascade)
+  industry           Industry         @relation(fields: [industryId], references: [id], onDelete: Cascade)
+
+  @@unique([activityProposalId, industryId])
+}
+
+model ActivityProposalCategory {
+  id                   String             @id @default(cuid())
+  activityProposalId   String
+  functionalCategoryId String
+  activityProposal     ActivityProposal   @relation(fields: [activityProposalId], references: [id], onDelete: Cascade)
+  functionalCategory   FunctionalCategory @relation(fields: [functionalCategoryId], references: [id], onDelete: Cascade)
+
+  @@unique([activityProposalId, functionalCategoryId])
+}
+
+model EvidenceProposal {
+  id              String                        @id @default(cuid())
+  authorUserId    String
+  materializedEvidenceId String?                @unique
+  type            String
+  sourceText      String
+  sourceUrl       String?
+  eventDate       DateTime?
+  editorialStatus EditorialStatus               @default(pending)
+  moderationNote  String?
+  createdAt       DateTime                      @default(now())
+  updatedAt       DateTime                      @updatedAt
+  author          User                          @relation(fields: [authorUserId], references: [id], onDelete: Cascade)
+  materializedEvidence Evidence?                @relation("MaterializedEvidence", fields: [materializedEvidenceId], references: [id], onDelete: SetNull)
+  translations    EvidenceProposalTranslation[]
+  activities      EvidenceProposalActivity[]
+  moderationActions ModerationAction[] @relation("ModerationEvidenceProposal")
+}
+
+model EvidenceProposalTranslation {
+  id                 String           @id @default(cuid())
+  evidenceProposalId String
+  locale             Locale
+  title              String
+  summary            String
+  context            String
+  evidenceProposal   EvidenceProposal @relation(fields: [evidenceProposalId], references: [id], onDelete: Cascade)
+
+  @@unique([evidenceProposalId, locale])
+}
+
+model EvidenceProposalActivity {
+  id                 String           @id @default(cuid())
+  evidenceProposalId String
+  activityId         String
+  evidenceProposal   EvidenceProposal @relation(fields: [evidenceProposalId], references: [id], onDelete: Cascade)
+  activity           Activity         @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@unique([evidenceProposalId, activityId])
+}
+
+model Comment {
+  id               String                  @id @default(cuid())
+  authorUserId     String
+  activityId       String?
+  evidenceId       String?
+  parentCommentId  String?
+  text             String
+  visibilityStatus CommentVisibilityStatus @default(visible)
+  reportStatus     CommentReportStatus     @default(clean)
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  author           User                    @relation(fields: [authorUserId], references: [id], onDelete: Cascade)
+  activity         Activity?               @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  evidence         Evidence?               @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+  parentComment    Comment?                @relation("CommentReplies", fields: [parentCommentId], references: [id], onDelete: Cascade)
+  replies          Comment[]               @relation("CommentReplies")
+  reports          CommentReport[]
+  moderationActions ModerationAction[]     @relation("ModerationComment")
+
+  @@index([activityId, visibilityStatus, createdAt])
+  @@index([evidenceId, visibilityStatus, createdAt])
+  @@index([parentCommentId, visibilityStatus, createdAt])
+}
+
+model CommentReport {
+  id             String              @id @default(cuid())
+  commentId      String
+  reporterUserId String
+  reason         String
+  details        String?
+  createdAt      DateTime            @default(now())
+  comment        Comment             @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  reporter       User                @relation(fields: [reporterUserId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, reporterUserId])
+}
+
+model EvidenceTranslation {
+  id         String   @id @default(cuid())
+  evidenceId String
+  locale     Locale
+  title      String
+  summary    String
+  context    String
+  slug       String
+  evidence   Evidence @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+
+  @@unique([evidenceId, locale])
+  @@unique([locale, slug])
+}
+
+model EvidenceActivity {
+  id         String   @id @default(cuid())
+  evidenceId String
+  activityId String
+  evidence   Evidence @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@unique([evidenceId, activityId])
+}
+
+model SeedImportRun {
+  id            String           @id @default(cuid())
+  sourcePath    String
+  status        SeedImportStatus @default(running)
+  processedRows Int              @default(0)
+  rejectedRows  Int              @default(0)
+  warningCount  Int              @default(0)
+  startedAt     DateTime         @default(now())
+  finishedAt    DateTime?
+  errorMessage  String?
+  items         SeedImportItem[]
+}
+
+model SeedImportItem {
+  id        String        @id @default(cuid())
+  runId     String
+  rowNumber Int
+  sourceKey String?
+  status    SeedImportStatus
+  warning   String?
+  error     String?
+  createdAt DateTime      @default(now())
+  run       SeedImportRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+}
+
+model ModerationAction {
+  id                 String               @id @default(cuid())
+  targetType         ModerationTargetType
+  targetId           String
+  actionType         ModerationActionType
+  actorUserId        String
+  reason             String
+  metadataJson       Json?
+  createdAt          DateTime             @default(now())
+  actor              User                 @relation(fields: [actorUserId], references: [id], onDelete: Cascade)
+  activityProposalId String?
+  evidenceProposalId String?
+  commentId          String?
+  evidenceId         String?
+  activityProposal   ActivityProposal?    @relation("ModerationActivityProposal", fields: [activityProposalId], references: [id], onDelete: Cascade)
+  evidenceProposal   EvidenceProposal?    @relation("ModerationEvidenceProposal", fields: [evidenceProposalId], references: [id], onDelete: Cascade)
+  comment            Comment?             @relation("ModerationComment", fields: [commentId], references: [id], onDelete: Cascade)
+  evidence           Evidence?            @relation("ModerationEvidence", fields: [evidenceId], references: [id], onDelete: Cascade)
+
+  @@index([targetType, targetId, createdAt])
+  @@index([actorUserId, createdAt])
+}
+
+model EditorialActivityStatusHistory {
+  id                    String          @id @default(cuid())
+  activityId            String
+  actorUserId           String
+  previousOfficialAiStatus Int?
+  newOfficialAiStatus   Int?
+  previousEditorialStatus EditorialStatus?
+  newEditorialStatus    EditorialStatus?
+  rationale             String
+  createdAt             DateTime        @default(now())
+  activity              Activity        @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  actor                 User            @relation(fields: [actorUserId], references: [id], onDelete: Cascade)
+
+  @@index([activityId, createdAt])
+  @@index([actorUserId, createdAt])
+}
+
+model PortalConfig {
+  id                    String   @id @default("default")
+  publicCommentsEnabled Boolean  @default(true)
+  updatedAt             DateTime @updatedAt
+  updatedByUserId       String?
+  updatedBy             User?    @relation(fields: [updatedByUserId], references: [id], onDelete: SetNull)
+}
+
+model ContactMessage {
+  id           String               @id @default(cuid())
+  authorUserId String?
+  name         String
+  email        String
+  subject      String?
+  message      String
+  status       ContactMessageStatus @default(new)
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  author       User?                @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([authorUserId, createdAt])
+}
